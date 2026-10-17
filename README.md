@@ -2,7 +2,7 @@
 
 [Русский](#русский) · [English](#english)
 
-Трейнер для одиночной игры **PRAGMATA** (Capcom, RE Engine, Windows x64). 21 функция, ресурсы, разблокировка чертежей, интерфейс на русском и английском с переключением на лету.
+Трейнер для одиночной игры **PRAGMATA** (Capcom, RE Engine, Windows x64). 22 функции, ресурсы, разблокировка чертежей, интерфейс на русском и английском с переключением на лету.
 
 ![Pragmata Trainer](assets/screenshot_ru.png)
 
@@ -50,6 +50,7 @@
 | Ctrl+Alt+Num8 | Хакинг без перезарядки | Откат взлома сбрасывается |
 | Ctrl+Alt+Num9 | Урон хакингом ×N | Урон взлома ×2–10 |
 | Ctrl+Alt+Num0 | Бесконечные активные навыки | Заряды навыков восстанавливаются |
+| Ctrl+Num. | Полёт сквозь стены (no clip) | WASD — полёт по взгляду камеры, пробел/Ctrl — вверх/вниз, Shift — быстрее |
 | — | Заморозка врагов | Время врагов остановлено |
 
 **Разовые действия** (результат остаётся в сохранении):
@@ -96,7 +97,7 @@ MIT. Проект не связан с Capcom.
 
 ### What it is
 
-An external trainer for the single-player **PRAGMATA** (Capcom, RE Engine, Windows x64): 21 functions, resources, blueprint unlocking, RU/EN interface with live switching. On connection it loads a small bridge `PragmataBridge.dll` into the game. The bridge finds the RE Engine virtual machine and the game's built-in type database in memory and works with the game's own classes by name: health (`HitPoint`), thruster and hacking gauges (`GaugeUnit`), weapons (`app.Weapon`), puzzles, inventory, the module printer. Actions run on the game thread every frame.
+An external trainer for the single-player **PRAGMATA** (Capcom, RE Engine, Windows x64): 22 functions, resources, blueprint unlocking, RU/EN interface with live switching. On connection it loads a small bridge `PragmataBridge.dll` into the game. The bridge finds the RE Engine virtual machine and the game's built-in type database in memory and works with the game's own classes by name: health (`HitPoint`), thruster and hacking gauges (`GaugeUnit`), weapons (`app.Weapon`), puzzles, inventory, the module printer. Actions run on the game thread every frame.
 
 Single-player only. The trainer does not touch the game's protection, networking or files on disk.
 
@@ -134,6 +135,7 @@ If the trainer reports no access to the game process, run it as administrator. L
 | Ctrl+Alt+Num8 | No hacking cooldown | Hacking cooldown resets |
 | Ctrl+Alt+Num9 | Hacking damage ×N | Hacking damage ×2–10 |
 | Ctrl+Alt+Num0 | Infinite active skills | Skill charges refill |
+| Ctrl+Num. | Fly through walls (no clip) | WASD flies where the camera looks, Space/Ctrl up/down, Shift faster |
 | — | Freeze enemies | Enemy time is stopped |
 
 **One-time actions** (results stay in the save):

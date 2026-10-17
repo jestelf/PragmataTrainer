@@ -335,6 +335,34 @@ static int AddItem(uintptr_t inv,uint32_t id,int n,int cap=0){
 static ULONGLONG gSlowAt=0;
 
 static bool IsGameWindow(HWND w){ DWORD pid=0; GetWindowThreadProcessId(w,&pid); return pid==GetCurrentProcessId(); }
+struct NoClip{ bool on=false; uintptr_t cc=0, tr=0, gw=0; float pos[3]={0,0,0}; ULONGLONG last=0; }; static NoClip gClip;
+static bool Key(int vk){ return (GetAsyncKeyState(vk)&0x8000)!=0; }
+static void NoClipTick(uintptr_t pl,std::ostringstream& st){
+ uintptr_t ta=Obj(pl,"<TerrainAdsorber>k__BackingField"); uintptr_t go=GameObjectOf(pl); uintptr_t tr=0; if(go) Call(&tr,go,"get_Transform");
+ uintptr_t cc=Obj(pl,"<CharacterController>k__BackingField"); uintptr_t gw=ta? Obj(ta,"_GravityWork") : 0; uintptr_t pp=ta? FA(ta,"<PrevPosition>k__BackingField") : 0;
+ if(!ta || !tdb::TypeOf(tr) || !cc || !gw || !pp){ st<<"noclip: нет объектов "; return; }
+ ULONGLONG now=GetTickCount64();
+ if(!gClip.on || gClip.cc!=cc){ gClip.on=true; gClip.cc=cc; gClip.tr=tr; gClip.gw=gw; for(int i=0;i<3;i++) gClip.pos[i]=R<float>(pp+4*i); gClip.last=now; }
+ CallV(cc,"set_Enabled",false); Set<uint8_t>(gw,"_EnabledGravity",0);
+ float dt=(float)(now-gClip.last)/1000.f; if(dt>0.1f) dt=0.1f; gClip.last=now;
+ float f[3]={0,0,0}; uintptr_t cam=Obj(pl,"<PlayerCamera>k__BackingField"); uintptr_t cq=cam? FA(cam,"<CameraObjectRotation>k__BackingField") : 0;
+ if(cq){ float x=R<float>(cq),y=R<float>(cq+4),z=R<float>(cq+8),w=R<float>(cq+12); f[0]=-2.f*(x*z+w*y); f[1]=-2.f*(y*z-w*x); f[2]=-(1.f-2.f*(x*x+y*y)); }
+ float len=sqrtf(f[0]*f[0]+f[1]*f[1]+f[2]*f[2]); if(len<0.01f){ f[0]=0; f[1]=0; f[2]=1; len=1; } for(int i=0;i<3;i++) f[i]/=len;
+ float r[3]={f[2],0.f,-f[0]}; float rl=sqrtf(r[0]*r[0]+r[2]*r[2]); if(rl>0.01f){ r[0]/=rl; r[2]/=rl; }
+ bool fg=GetForegroundWindow() && IsGameWindow(GetForegroundWindow());
+ float mf=fg? (float)(Key('W')-Key('S')) : 0.f, mr=fg? (float)(Key('A')-Key('D')) : 0.f, mu=fg? (float)(Key(VK_SPACE)-Key(VK_CONTROL)) : 0.f;
+ float speed=(fg && Key(VK_SHIFT))? 24.f : 8.f;
+ for(int i=0;i<3;i++) gClip.pos[i]+=(f[i]*mf+r[i]*mr+(i==1? mu : 0.f))*speed*dt;
+ alignas(16) static float v[4]; v[0]=gClip.pos[0]; v[1]=gClip.pos[1]; v[2]=gClip.pos[2]; v[3]=0.f;
+ CallV(tr,"set_Position",(void*)v);
+ uintptr_t ov=Obj(ta,"_OriginVelocity"); uintptr_t va=ov? FA(ov,"_MovingVelocity") : 0; if(va) for(int i=0;i<3;i++) W<float>(va+4*i,0.f);
+ st<<"noclip "<<(int)gClip.pos[0]<<","<<(int)gClip.pos[1]<<","<<(int)gClip.pos[2]<<" ";
+}
+static void NoClipOff(){
+ if(gClip.cc){ CallV(gClip.cc,"set_Enabled",true); CallV(gClip.cc,"warp"); }
+ if(gClip.gw) Set<uint8_t>(gClip.gw,"_EnabledGravity",1);
+ gClip=NoClip();
+}
 static void Tick(){
  ULONGLONG now=GetTickCount64(); bool slow=now-gSlowAt>=1000; if(slow) gSlowAt=now;
  bool any=false; for(auto& kv:gOn) any|=kv.second; if(!any){ gLastTick="ожидание"; return; }
@@ -346,6 +374,7 @@ static void Tick(){
  if(gOn["nohit"]){ uintptr_t hp=HitPoint(pl); if(hp){ Keep<uint8_t>("nohit",FA(hp,"<Invincible>k__BackingField"),1); Keep<uint8_t>("nohit",FA(hp,"<NoDamage>k__BackingField"),1); } }
 
  if(gOn["jetpack"]){ uintptr_t d=Obj(pl,"<PlayerThrusterGaugeDriver>k__BackingField"); FillGauge("jetpack",d? Obj(d,"<BaseThrusterGauge>k__BackingField") : 0); }
+ if(gOn["noclip"]) NoClipTick(pl,st);
  if(gOn["highjump"]){ uintptr_t ta=Obj(pl,"<TerrainAdsorber>k__BackingField"); uintptr_t gw=ta? Obj(ta,"_GravityWork") : 0;
   uintptr_t ov=ta? Obj(ta,"_OriginVelocity") : 0; uintptr_t sw=ta? Obj(ta,"_SubStepAdditionalVelocityWork") : 0;
   uintptr_t va=ov? FA(ov,"_MovingVelocity") : 0;
@@ -421,6 +450,7 @@ static void Tick(){
 }
 
 static void SwitchOff(const std::string& k){
+ if(k=="noclip"){ NoClipOff(); return; }
  if(k=="highjump"){ gJump=JumpScale(); return; }
  if(k=="speed"){ RestoreScales(0); return; }
  if(k=="freeze"){ RestoreScales(1); return; }
@@ -428,7 +458,7 @@ static void SwitchOff(const std::string& k){
  Restore(k);
 }
 
-static const char* kKeys[]={"god","nohit","jetpack","highjump","oxygen","repair","invis","speed","ammo","noreload","nocool","accuracy","norecoil","onehit","hack","hacktimer","hackgauge","hackcool","hackdmg","skills","freeze"};
+static const char* kKeys[]={"god","nohit","jetpack","highjump","noclip","oxygen","repair","invis","speed","ammo","noreload","nocool","accuracy","norecoil","onehit","hack","hacktimer","hackgauge","hackcool","hackdmg","skills","freeze"};
 static std::string Hex(uintptr_t v){ char b[32]; sprintf_s(b,"0x%llX",(unsigned long long)v); return b; }
 
 static std::string Exec(const std::string& line){

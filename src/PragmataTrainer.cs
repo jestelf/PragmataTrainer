@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 [assembly: AssemblyTitle("Pragmata Trainer")]
 [assembly: AssemblyProduct("Pragmata Trainer")]
-[assembly: AssemblyVersion("1.0.0.0")]
+[assembly: AssemblyVersion("1.1.0.0")]
 
 static class L {
  public static bool En;
@@ -39,7 +39,7 @@ static class L {
   {"Хакинг без перезарядки","No hacking cooldown"},{"Откат взлома сбрасывается каждый кадр","Hacking cooldown resets every frame"},
   {"Урон хакингом ×N","Hacking damage ×N"},{"Базовый урон взлома умножается (множитель ниже)","Base hacking damage is multiplied (multiplier below)"},
   {"Бесконечные активные навыки","Infinite active skills"},{"Заряды навыков восстанавливаются каждую секунду","Skill charges refill every second"},
-  {"Заморозка врагов","Freeze enemies"},{"Время врагов остановлено","Enemy time is stopped"},
+  {"Заморозка врагов","Freeze enemies"},{"Полёт сквозь стены (no clip)","Fly through walls (no clip)"},{"WASD — полёт по взгляду, пробел/Ctrl — вверх/вниз, Shift — быстрее","WASD flies where you look, Space/Ctrl up/down, Shift faster"},{"Время врагов остановлено","Enemy time is stopped"},
   {"Луноволокно","Lunafilament"},{"Компоненты для улучшения","Upgrade components"},{"Чистый лунум","Pure lunum"},
   {"ПЕРЕКЛЮЧАТЕЛЕЙ","TOGGLES"},{"Ctrl + F12 — отключить все читы","Ctrl + F12 — turn every cheat off"},
   {"○ Игра не подключена","○ Game not connected"},{"Запустите PRAGMATA и загрузите сохранение","Start PRAGMATA and load a save"},
@@ -79,7 +79,7 @@ static class L {
   new[]{"здоровье недоступно","health unavailable"},new[]{"инвентарь не найден","inventory not found"},new[]{"не найдена VM движка","engine VM not found"},
   new[]{"таблицы TDB недоступны","TDB tables unavailable"},new[]{"неожиданная версия TDB ","unexpected TDB version "},new[]{"VM ещё не создана","VM not created yet"},
   new[]{"открыто перков: ","perks unlocked: "},new[]{", прокачано: ",", maxed: "},new[]{"таймеров взлома: ","hacking timers: "},new[]{"оружие: ","weapons: "},
-  new[]{"перки: ","perks: "},new[]{"врагов: ","enemies: "},new[]{"оружия: ","weapons: "},new[]{"прыжок ","jump "},new[]{"вверх","up"},new[]{"вниз","down"},new[]{"количество","amount"},
+  new[]{"перки: ","perks: "},new[]{"врагов: ","enemies: "},new[]{"оружия: ","weapons: "},new[]{"прыжок ","jump "},new[]{"вверх","up"},new[]{"нет объектов","objects not found"},new[]{"вниз","down"},new[]{"количество","amount"},
   new[]{"значение","value"},new[]{"сбой в такте","tick failure"},new[]{"в VM нет TDB","no TDB in the VM"},new[]{"не инициализирована","not initialised"},
   new[]{"ожидание","idle"},new[]{"исключение","exception"},new[]{"запись","write"}
  };
@@ -149,6 +149,7 @@ sealed class Trainer : Form {
   new Cheat{Key="hackcool",Title="Хакинг без перезарядки",Description="Откат взлома сбрасывается каждый кадр"},
   new Cheat{Key="hackdmg",Title="Урон хакингом ×N",Description="Базовый урон взлома умножается (множитель ниже)"},
   new Cheat{Key="skills",Title="Бесконечные активные навыки",Description="Заряды навыков восстанавливаются каждую секунду"},
+  new Cheat{Key="noclip",Title="Полёт сквозь стены (no clip)",Description="WASD — полёт по взгляду, пробел/Ctrl — вверх/вниз, Shift — быстрее"},
   new Cheat{Key="freeze",Title="Заморозка врагов",Description="Время врагов остановлено"}
  };
  static readonly string[][] Currencies={new[]{"0x84C2F1F3","Луноволокно"},new[]{"0x0B30CA95","Компоненты для улучшения"},new[]{"0x7D9B1F63","Чистый лунум"}};
@@ -340,12 +341,14 @@ sealed class Trainer : Form {
  void UpdateHotkeys(){
   bool enable=Live() && keys.Checked;if(!enable){UnregisterKeys();foreach(var r in rows)r.Hotkey=HotkeyName(r.Index);return;}
   if(hotkeys.Count>0 || !IsHandleCreated)return;
-  foreach(var row in rows){int i=row.Index;row.Hotkey=HotkeyName(i);int id=100+i;if(i>=20)continue;
+  foreach(var row in rows){int i=row.Index;row.Hotkey=HotkeyName(i);int id=100+i;
+   if(row.Cheat.Key=="noclip"){if(RegisterHotKey(Handle,id,0x4002,0x6E)){CheatRow cap=row;hotkeys[id]=delegate{Toggle(cap.Cheat);};}continue;}
+   if(i>=20)continue;
    int j=i%10;uint vk=(uint)(j<9?0x61+j:0x60);uint mods=(uint)(0x4000|2|(i>=10?1:0));
    if(RegisterHotKey(Handle,id,mods,vk)){CheatRow capture=row;hotkeys[id]=delegate{Toggle(capture.Cheat);};}else{row.Hotkey+=L.T(" (занята)");Log(L.T("Горячая клавиша занята: ")+L.T(row.Cheat.Title));}}
   if(RegisterHotKey(Handle,200,0x4002,0x7B))hotkeys[200]=delegate{ClearAll();};else Log(L.T("Ctrl + F12 занята другим приложением"));
  }
- static string HotkeyName(int i){if(i>=20)return L.T("без клавиши");int j=i%10;return (i<10?"Ctrl":"Ctrl+Alt")+"+Num"+(j<9?j+1:0);}
+ static string HotkeyName(int i){if(i<Cheats.Length && Cheats[i].Key=="noclip")return "Ctrl+Num.";if(i>=20)return L.T("без клавиши");int j=i%10;return (i<10?"Ctrl":"Ctrl+Alt")+"+Num"+(j<9?j+1:0);}
  void UnregisterKeys(){if(!IsHandleCreated)return;foreach(int id in hotkeys.Keys)UnregisterHotKey(Handle,id);hotkeys.Clear();}
  protected override void WndProc(ref Message m){if(m.Msg==0x312){Action a;if(hotkeys.TryGetValue(m.WParam.ToInt32(),out a))a();}base.WndProc(ref m);}
 
